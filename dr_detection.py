@@ -8,7 +8,10 @@ import pandas as pd
 import os
 import shutil
 from sklearn.model_selection import train_test_split
-import math
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 def split_dataset(categories):
     # Load CSV file into a DataFrame
@@ -33,7 +36,7 @@ def split_dataset(categories):
 
     return train_ids, val_ids, test_ids
 
-def add_dataset(base_dir, train_ids, val_ids, test_ids, dataset_type):
+def add_dataset(base_dir, train_ids, val_ids, test_ids, dataset_type, categories):
     for category in categories:
         # List all files in category folder
         images = os.listdir(os.path.join(base_dir, category))
@@ -54,6 +57,21 @@ def add_dataset(base_dir, train_ids, val_ids, test_ids, dataset_type):
 
             if split is not None:
                 shutil.copy(os.path.join(base_dir, category, img), f'dataset/{split}/{category}/{img_name}')
+
+
+def apply_transformations(base_dir, categories):
+    print(categories)
+    for split in ['train', 'val', 'test']:
+        for category in categories:
+            path = f'{base_dir}/{split}/{category}'
+            print(path)
+            images = os.listdir(path)
+            for img in images:
+                if img.find("-") == -1:
+                    image_path = os.path.join(path, img)
+                    apply_canny_edge_detection(image_path, lower_threshold=30, upper_threshold=120)
+                    apply_gamma_correction(image_path, gamma=2.2)
+
 
 
 
@@ -178,6 +196,57 @@ def test_model(model_name, test_dir):
     print(f'Test loss: {test_loss:.4f}')
 
 
+
+def apply_canny_edge_detection(image_path, lower_threshold=30, upper_threshold=120):
+    # Read the image in grayscale
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    # Apply Canny edge detection
+    edges = cv2.Canny(image, lower_threshold, upper_threshold)
+    
+    # Save the result to a new file
+    cv2.imwrite(f"{image_path.split(".png")[0]}-edge.png", edges)
+
+    return edges
+
+    
+
+
+
+def apply_gamma_correction(image_path, gamma):
+    # Read the image
+    image = cv2.imread(image_path)
+    
+    # Normalize the image to range [0, 1]
+    normalized_image = image / 255.0
+    
+    # Apply gamma correction: I_output = I_input ^ gamma
+    gamma_corrected = np.power(normalized_image, gamma)
+    
+    # Scale back to range [0, 255] and convert to 8-bit unsigned integers
+    gamma_corrected = np.uint8(gamma_corrected * 255)
+
+    cv2.imwrite(f"{image_path.split(".png")[0]}-gamma.png", gamma_corrected)
+    
+    return gamma_corrected
+
+
+def apply_gaussian_filter(image_path, ksize=(5, 5), sigmaX=0):
+    # Read the image in grayscale
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    # Apply Gaussian Blur
+    blurred_image = cv2.GaussianBlur(image, ksize, sigmaX)
+    
+    # Save the result to a new file
+    cv2.imwrite(f"{image_path.split(".png")[0]}-gaussian.png", blurred_image)
+
+    return blurred_image
+
+
+
+
+
 if __name__ == "__main__":
     # Assuming images are in subfolders by severity level 
     categories = ['Mild', 'Moderate', 'No_DR', 'Proliferate_DR', 'Severe']
@@ -188,9 +257,11 @@ if __name__ == "__main__":
     grayscale_dir = 'dr_grayscale/grayscale_images/grayscale_images'
     gaussian_dir = 'dr_gaussian/gaussian_filtered_images/gaussian_filtered_images'
 
-    # add_dataset(normal_dir, train_ids, val_ids, test_ids, None)
-    # add_dataset(grayscale_dir, train_ids, val_ids, test_ids, "grayscale")
-    # add_dataset(gaussian_dir, train_ids, val_ids, test_ids, "gaussian")
+    # add_dataset(normal_dir, train_ids, val_ids, test_ids, None, categories)
+    # add_dataset(grayscale_dir, train_ids, val_ids, test_ids, "grayscale", categories)
+    # add_dataset(gaussian_dir, train_ids, val_ids, test_ids, "gaussian", categories)
+
+    # apply_transformations("dataset", categories)
 
     # Data directories - Update these paths with your dataset location
     train_dir = 'dataset/train'
@@ -198,10 +269,6 @@ if __name__ == "__main__":
     test_dir = 'dataset/test'
 
     # model = train_model(train_dir, val_dir)
-
-    
-
-
 
     model_file = "dr_classification_model.h5"
     test_model(model_file, test_dir)
