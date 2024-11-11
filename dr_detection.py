@@ -13,6 +13,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def create_dataset():
+    # Assuming images are in subfolders by severity level 
+    categories = ['Mild', 'Moderate', 'No_DR', 'Proliferate_DR', 'Severe']
+    train_ids, val_ids, test_ids = split_dataset(categories)
+
+    # Data directories - Update these paths with your dataset location
+    normal_dir = "dr_normal/colored_images"
+    grayscale_dir = 'dr_grayscale/grayscale_images/grayscale_images'
+    gaussian_dir = 'dr_gaussian/gaussian_filtered_images/gaussian_filtered_images'
+
+    add_dataset(normal_dir, train_ids, val_ids, test_ids, None, categories)
+    add_dataset(grayscale_dir, train_ids, val_ids, test_ids, "grayscale", categories)
+    add_dataset(gaussian_dir, train_ids, val_ids, test_ids, "gaussian", categories)
+
+    apply_transformations("dataset", categories)
+
 def split_dataset(categories):
     # Load CSV file into a DataFrame
     df = pd.read_csv('images.csv')
@@ -248,20 +264,8 @@ def apply_gaussian_filter(image_path, ksize=(5, 5), sigmaX=0):
 
 
 if __name__ == "__main__":
-    # Assuming images are in subfolders by severity level 
-    categories = ['Mild', 'Moderate', 'No_DR', 'Proliferate_DR', 'Severe']
-    # train_ids, val_ids, test_ids = split_dataset(categories)
-
-    # Data directories - Update these paths with your dataset location
-    normal_dir = "dr_normal/colored_images"
-    grayscale_dir = 'dr_grayscale/grayscale_images/grayscale_images'
-    gaussian_dir = 'dr_gaussian/gaussian_filtered_images/gaussian_filtered_images'
-
-    # add_dataset(normal_dir, train_ids, val_ids, test_ids, None, categories)
-    # add_dataset(grayscale_dir, train_ids, val_ids, test_ids, "grayscale", categories)
-    # add_dataset(gaussian_dir, train_ids, val_ids, test_ids, "gaussian", categories)
-
-    # apply_transformations("dataset", categories)
+   
+#    create_dataset()
 
     # Data directories - Update these paths with your dataset location
     train_dir = 'dataset/train'
