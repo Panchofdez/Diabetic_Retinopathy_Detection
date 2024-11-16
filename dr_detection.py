@@ -67,7 +67,7 @@ def split_dataset(categories, dataset_folder='dataset', splits=['train', 'val', 
     # Create directories for train/validation/test
     for split in splits:
         for category in categories:
-            path = f'dataset/{split}/{category}'
+            path = f'{dataset_folder}/{split}/{category}'
             if not(os.path.exists(path) and os.path.isdir(path)):
                 os.makedirs(path, exist_ok=True)
 
