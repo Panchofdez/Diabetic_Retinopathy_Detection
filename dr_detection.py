@@ -17,16 +17,11 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
 
-def create_dataset():
+def create_dataset(normal_dir, grayscale_dir, gaussian_dir):
     # Assuming images are in subfolders by severity level 
     categories = ['Mild', 'Moderate', 'No_DR', 'Proliferate_DR', 'Severe']
     splits=['train', 'val', 'test']
     train_ids, val_ids, test_ids = split_dataset(categories, splits=splits )
-
-    # Data directories - Update these paths with your dataset location
-    normal_dir = "dr_normal/colored_images"
-    grayscale_dir = 'dr_grayscale/grayscale_images/grayscale_images'
-    gaussian_dir = 'dr_gaussian/gaussian_filtered_images/gaussian_filtered_images'
     
     add_dataset(normal_dir, train_ids, val_ids, test_ids, None, categories)
     add_dataset(grayscale_dir, train_ids, val_ids, test_ids, "grayscale", categories)
@@ -500,7 +495,7 @@ def apply_gamma_correction(image_path, gamma):
     return gamma_corrected
 
 
-def apply_gaussian_filter(image_path, ksize=(5, 5), sigmaX=0):
+def apply_gaussian_blur(image_path, ksize=(5, 5), sigmaX=0):
     # Read the image in grayscale
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     
@@ -508,9 +503,33 @@ def apply_gaussian_filter(image_path, ksize=(5, 5), sigmaX=0):
     blurred_image = cv2.GaussianBlur(image, ksize, sigmaX)
     
     # Save the result to a new file
-    cv2.imwrite(f"{image_path.split('.png')[0]}-gaussian.png", blurred_image)
+    cv2.imwrite(f"{image_path.split('.png')[0]}-gaussian_blur.png", blurred_image)
 
     return blurred_image
+
+def apply_histogram_equalization(image_path):
+    # Read the image in grayscale
+    image = cv2.imread(image_path)
+    
+    # Check if the image is grayscale or color
+    if len(image.shape) == 2:  # Grayscale image
+        # Apply histogram equalization
+        equalized_image = cv2.equalizeHist(image)
+    else:  # Color image
+        # Convert the image to YCrCb color space
+        ycrcb_image = cv2.cvtColor(image, cv2.COLOR_BGR2YCrCb)
+        
+        # Equalize the histogram of the Y channel (brightness)
+        ycrcb_image[:, :, 0] = cv2.equalizeHist(ycrcb_image[:, :, 0])
+        
+        # Convert back to BGR color space
+        equalized_image = cv2.cvtColor(ycrcb_image, cv2.COLOR_YCrCb2BGR)
+    
+    # Save the result to a new file
+    output_path = f"{image_path.split('.png')[0]}-histogram.png"
+    cv2.imwrite(output_path, equalized_image)
+
+    return equalized_image
 
 def apply_high_pass_filter(image_path, ksize=(5, 5), sigmaX=8):
     # Read the image in grayscale
@@ -529,6 +548,26 @@ def apply_high_pass_filter(image_path, ksize=(5, 5), sigmaX=8):
     cv2.imwrite(f"{image_path.split('.png')[0]}-highpass.png", enhanced_image)
     
     return enhanced_image
+
+
+def apply_laplacian_of_gaussian(image_path, ksize=5, sigma=1.0):
+    # Read the image in grayscale
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    # Apply Gaussian Blur
+    blurred_image = cv2.GaussianBlur(image, (ksize, ksize), sigma)
+    
+    # Apply the Laplacian operator
+    # Use a 64-bit float for Laplacian to capture negative values
+    laplacian = cv2.Laplacian(blurred_image, cv2.CV_64F)
+    
+    # Convert the result to an 8-bit image (0-255 range)
+    laplacian = cv2.convertScaleAbs(laplacian)
+    
+    # Save the result to a new file
+    cv2.imwrite(f"{image_path.split('.png')[0]}-LoG.png", laplacian)
+
+    return laplacian
 
 # Plot the training history to see if there's overfitting
 def plot_training_history(history):
@@ -565,8 +604,12 @@ def plot_training_history(history):
 
 
 if __name__ == "__main__":
+     # Data directories - Update these paths with your dataset location
+    normal_dir = "dr_normal/colored_images"
+    grayscale_dir = 'dr_grayscale/grayscale_images/grayscale_images'
+    gaussian_dir = 'dr_gaussian/gaussian_filtered_images/gaussian_filtered_images'
    
-    # create_dataset()
+    create_dataset(normal_dir, grayscale_dir, gaussian_dir)
 
     # Data directories - Update these paths with your dataset location
     train_dir = 'dataset/train'
@@ -575,7 +618,5 @@ if __name__ == "__main__":
 
     # model = train_model(train_dir, val_dir)
 
-    # model_file = "dr_classification_model.h5"
-    model_file = "best_model.h5"
+    model_file = "dr_classification_model_79_5.h5"
     test_model(model_file, test_dir)
-
